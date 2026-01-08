@@ -65,7 +65,7 @@ const getActiveRentersCount = () => {
   }
   return count;
 };
-const activeConversations = new Map(); // { userId: conversationId }
+const activeConversations = new Map(); 
 
 
 io.on('connection', (socket) => {
@@ -123,16 +123,16 @@ io.on('connection', (socket) => {
       
       console.log('New message received via socket:', data);
       
-      // ⭐ Check if receiver is online AND viewing this specific conversation
+   
       const receiverOnline = onlineUsers.has(receiverId);
       const receiverViewingConversation = activeConversations.get(receiverId) === senderId;
       
-      // Only mark as read if receiver is online AND actively viewing this conversation
+   
       const isRead = receiverOnline && receiverViewingConversation;
       
       console.log(`📊 Receiver ${receiverId} - Online: ${receiverOnline}, Viewing: ${receiverViewingConversation}, Mark as read: ${isRead}`);
       
-      // ⭐ Update database if message should be marked as read
+      
       if (isRead && tempId) {
         const Message = require('./models/messages');
         
@@ -148,7 +148,7 @@ io.on('connection', (socket) => {
         }
       }
       
-      // Emit to receiver
+   
       io.to(receiverId).emit('newMessage', {
         id: tempId,
         senderId: senderId,
@@ -157,17 +157,17 @@ io.on('connection', (socket) => {
         image: image,
         sendBy: sendBy,
         timestamp: timestamp,
-        read: isRead, // ⭐ Changed from receiverOnline to isRead
+        read: isRead, 
         conversationId: conversationId,
         isNewConversation: isNewConversation, 
         vendor: vendor,
         user: user 
       });
   
-      // Confirm to sender
+    
       socket.emit('messageSent', {
         tempId: tempId,
-        read: isRead, // ⭐ Changed from receiverOnline to isRead
+        read: isRead, 
         success: true
       });
   
@@ -183,7 +183,7 @@ io.on('connection', (socket) => {
   
   
 
-// Add this new socket listener in your io.on('connection') block
+
 
 socket.on('sendAdminSupportMessage', async (data) => {
   try {
@@ -191,7 +191,7 @@ socket.on('sendAdminSupportMessage', async (data) => {
     
     console.log('Admin support message sent via socket:', data);
     
-    // Emit directly to the user's socket room
+  
     io.to(userId).emit('newSupportMessage', {
       ticketId: ticketId,
       message: {
@@ -209,14 +209,14 @@ socket.on('sendAdminSupportMessage', async (data) => {
   }
 });
 
-// ADD THIS IN YOUR SOCKET LISTENERS
+
 socket.on('ticketClosed', (data) => {
   try {
     const { ticketId, userId, userType, closedAt } = data;
     
     console.log('Ticket closed by user:', data);
     
-    // Broadcast to admin room
+  
     io.to('admin-room').emit('ticketClosed', {
       ticketId: ticketId,
       userId: userId,
@@ -230,21 +230,18 @@ socket.on('ticketClosed', (data) => {
   }
 });
 
-// Add these new socket listeners in your io.on('connection') block
-// ADD THIS NEW LISTENER
 socket.on('newTicketCreated', async (data) => {
   try {
     const { ticketId, message, sendBy, userId, timestamp, messageId, userType } = data;
     
     console.log('New ticket created via socket:', data);
     
-    // Fetch the complete ticket with populated user data
-    const SupportTicket = require('./models/ticket'); // Adjust path as needed
+  
+    const SupportTicket = require('./models/ticket'); 
     
     const populatedTicket = await SupportTicket.findById(ticketId)
       .populate('userId', 'name email avatar');
     
-    // Emit to admin room with complete ticket data
     io.to('admin-room').emit('newTicket', {
       ticket: populatedTicket,
       message: {
@@ -268,7 +265,7 @@ socket.on('sendSupportMessage', async (data) => {
     
     console.log('Support message sent via socket:', data);
     
-    // Emit to admin room
+
     io.to('admin-room').emit('newSupportMessage', {
       ticketId: ticketId,
       message: {
@@ -294,7 +291,7 @@ socket.on('supportMessagesRead', async (data) => {
     
     console.log('Support messages read by user:', data);
     
-    // Emit to admin room to update read status
+    
     io.to('admin-room').emit('supportMessageRead', {
       ticketId: ticketId,
       userId: userId,
@@ -393,7 +390,7 @@ socket.on('joinAdminRoom', () => {
     
     if (socket.userId) {
       onlineUsers.delete(socket.userId);
-      activeConversations.delete(socket.userId); // ⭐ ADD THIS LINE
+      activeConversations.delete(socket.userId); 
       
       socket.broadcast.emit('userOffline', {
         userId: socket.userId,
@@ -428,7 +425,7 @@ app.use(messagesRoutes)
 
 
 
-// Replace your /adminsupportsendmessage route with this:
+
 
 
 app.post('/adminsupportsendmessage', async(req, res) => {
@@ -462,13 +459,12 @@ app.post('/adminsupportsendmessage', async(req, res) => {
       seenByUser: false
     });
     
-    // ❌ REMOVE the socket emit from here - let frontend handle it
-    // This prevents duplicate emissions
+   
     
     res.json({ 
       success: true, 
       messageId: newMessage._id,
-      userId: ticket.userId._id // Return userId for socket emit
+      userId: ticket.userId._id 
     });
     
   } catch (error) {
@@ -493,7 +489,7 @@ app.patch('/closeTicket/:ticketId',async(req, res) => {
     ticket.status = 'closed';
     await ticket.save();
     
-    // EMIT SOCKET EVENT TO ADMIN ROOM
+   
     if (typeof io !== 'undefined' && io) {
       io.to('admin-room').emit('ticketClosed', {
         ticketId: ticketId,
