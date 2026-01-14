@@ -518,7 +518,7 @@ app.get('/cancelsub',async(req,res)=>{
 console.log(e.message)
   }
 })
-
+console.log("HEY")
 app.get('/connect-billcom', async (req, res) => {
     try {
       const loginResponse = await fetch('https://gateway.stage.bill.com/connect/v3/login', {
