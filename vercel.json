@@ -1,26 +1,19 @@
 {
-    "version": 2,
-    "builds": [
-      {
-        "src": "index.js",
-        "use": "@vercel/node"
-      }
+    "version":2,
+    "builds":[
+        {
+            "src":"*.js",
+            "use":"@vercel/node"
+        }
     ],
-    "routes": [
-      {
-        "src": "/webhook",
-        "dest": "index.js",
-        "methods": ["POST"]
-      },
-      {
-        "src": "/(.*)",
-        "dest": "index.js"
-      }
-    ],
-    "functions": {
-      "index.js": {
-        "maxDuration": 30,
-        "memory": 1024
-      }
-    }
-  }
+    "routes":[
+        {
+            "src":"/(.*)",
+            "dest":"/"
+        }
+    ]
+
+
+
+    
+}
