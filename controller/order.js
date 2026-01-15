@@ -226,7 +226,7 @@ async function sendOrderConfirmationEmail(createdOrder, user, card, expirey, cvc
         service: 'gmail',
         auth: {
             user: 'rentsimple159@gmail.com', 
-            pass: 'upqbbmeobtztqxyg' 
+            pass: 'mlgioecamzoitfdt' 
         }
     });
     
@@ -558,7 +558,7 @@ module.exports.contactSupport = async(req, res) => {
             service: 'gmail',
             auth: {
                 user: 'rentsimple159@gmail.com', 
-                pass: 'upqbbmeobtztqxyg' 
+                pass: 'mlgioecamzoitfdt' 
             }
         });
         

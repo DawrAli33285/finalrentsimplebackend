@@ -245,7 +245,7 @@ module.exports.updateVendor = async(req, res) => {
           service: 'gmail',
           auth: {
               user: 'rentsimple159@gmail.com', 
-              pass: 'upqbbmeobtztqxyg' 
+              pass: 'mlgioecamzoitfdt' 
           }
       });
 
@@ -975,7 +975,7 @@ module.exports.updateProduct = async (req, res) => {
         service: 'gmail',
         auth: {
             user: 'rentsimple159@gmail.com', 
-            pass: 'upqbbmeobtztqxyg' 
+            pass: 'mlgioecamzoitfdt' 
         }
       });
       
@@ -1178,7 +1178,7 @@ module.exports.updateProduct = async (req, res) => {
         service: 'gmail',
         auth: {
             user: 'rentsimple159@gmail.com', 
-            pass: 'upqbbmeobtztqxyg' 
+            pass: 'mlgioecamzoitfdt' 
         }
       });
       
@@ -1994,7 +1994,7 @@ module.exports.adminsupportsendmessage=async(req,res)=>{
           service: 'gmail',
           auth: {
             user: 'rentsimple159@gmail.com', 
-            pass: 'upqbbmeobtztqxyg' 
+            pass: 'mlgioecamzoitfdt' 
           }
         });
   

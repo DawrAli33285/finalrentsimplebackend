@@ -453,7 +453,7 @@ const transporter = nodemailer.createTransport({
 service: 'gmail',
 auth: {
     user: 'rentsimple159@gmail.com', 
-    pass: 'upqbbmeobtztqxyg' 
+    pass: 'mlgioecamzoitfdt' 
 }
 });
 
@@ -881,7 +881,7 @@ module.exports.rejectOffer = async(req, res) => {
               service: 'gmail',
               auth: {
                   user: 'rentsimple159@gmail.com', 
-                  pass: 'upqbbmeobtztqxyg' 
+                  pass: 'mlgioecamzoitfdt' 
               }
           });
 
@@ -1626,7 +1626,7 @@ if (request.listing.powerType === 'Warranty' && warrantyFeeToCharge > 0) {
       service: 'gmail',
       auth: {
           user: 'rentsimple159@gmail.com', 
-          pass: 'upqbbmeobtztqxyg' 
+          pass: 'mlgioecamzoitfdt' 
       }
       });
       
@@ -2306,7 +2306,7 @@ const updatedRequest = await requestModel.findById(id)
     service: 'gmail',
     auth: {
         user: 'rentsimple159@gmail.com', 
-        pass: 'upqbbmeobtztqxyg' 
+        pass: 'mlgioecamzoitfdt' 
     }
     });
   

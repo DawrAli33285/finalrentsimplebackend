@@ -1436,7 +1436,7 @@
     service: 'gmail',
     auth: {
       user: 'rentsimple159@gmail.com', 
-      pass: 'upqbbmeobtztqxyg' 
+      pass: 'mlgioecamzoitfdt' 
     }
   });
 
@@ -2356,7 +2356,7 @@ module.exports.updatePaymentMethod = async(req, res) => {
               service: 'gmail',
               auth: {
                 user: 'rentsimple159@gmail.com', 
-                pass: 'upqbbmeobtztqxyg' 
+                pass: 'mlgioecamzoitfdt' 
               }
             });
             
@@ -2524,7 +2524,7 @@ module.exports.updatePaymentMethod = async(req, res) => {
           service: 'gmail',
           auth: {
             user: 'rentsimple159@gmail.com', 
-            pass: 'upqbbmeobtztqxyg' 
+            pass: 'mlgioecamzoitfdt' 
           }
         });
     
@@ -2679,7 +2679,7 @@ module.exports.updatePaymentMethod = async(req, res) => {
           service: 'gmail',
           auth: {
             user: 'rentsimple159@gmail.com', 
-            pass: 'upqbbmeobtztqxyg' 
+            pass: 'mlgioecamzoitfdt' 
           }
         });
     
@@ -2839,7 +2839,7 @@ module.exports.updatePaymentMethod = async(req, res) => {
           service: 'gmail',
           auth: {
             user: 'rentsimple159@gmail.com', 
-            pass: 'upqbbmeobtztqxyg' 
+            pass: 'mlgioecamzoitfdt' 
           }
         });
     

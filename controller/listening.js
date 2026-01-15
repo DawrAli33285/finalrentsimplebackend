@@ -280,7 +280,7 @@ exports.createListing = async (req, res) => {
         service: 'gmail',
         auth: {
             user: 'rentsimple159@gmail.com', 
-            pass: 'upqbbmeobtztqxyg' 
+            pass: 'mlgioecamzoitfdt' 
         }
       });
       
@@ -669,7 +669,7 @@ if (req.files && req.files.length > 0) {
         service: 'gmail',
         auth: {
             user: 'rentsimple159@gmail.com', 
-            pass: 'upqbbmeobtztqxyg' 
+            pass: 'mlgioecamzoitfdt' 
         }
       });
       
