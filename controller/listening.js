@@ -27,9 +27,13 @@ exports.createListing = async (req, res) => {
         location,
         powerType,
         deliveryPrice,
-        installationPrice
+        installationPrice,
+        dimensions,
+        warrantyPrice,
+        warranty
       } = req.body;
   
+ 
       if (!title || !category || !brand || !condition || !rentPrice || !buyPrice || !description) {
         return res.status(400).json({
           error: 'Please provide all required fields'
@@ -63,6 +67,7 @@ exports.createListing = async (req, res) => {
           rentPrice,
           buyPrice
         },
+        warrantyPrice,
         description,
         images: images,
         specifications,
@@ -74,10 +79,12 @@ exports.createListing = async (req, res) => {
         publishToFeed,
         powerType,
         deliveryPrice,
-        installationPrice
+        installationPrice,
+        warranty,
+        dimensions
       });
   
-      console.log("THERE")
+    
       vendor.stats.totalListings += 1;
       if (listAsActive) {
         vendor.stats.activeListings += 1;

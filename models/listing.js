@@ -104,6 +104,18 @@ const listingSchema = new mongoose.Schema({
   },
   installationPrice:{
     type:Number
+  },
+  warrantyPrice:{
+    type:Number
+  },
+  warranty:{
+    type:Boolean,
+    default:false
+  },
+  dimensions:{
+    length:String,
+    width:String,
+    height:String
   }
 }, {
   timestamps: true

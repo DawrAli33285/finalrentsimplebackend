@@ -1,13 +1,15 @@
 const userModel = require('../models/user');
 const jwt = require('jsonwebtoken'); 
+const argon=require('argon2')
 const nodemailer=require('nodemailer')
+
+
 module.exports.register = async (req, res) => {
-  let { ...data } = req.body;
+  let { paymentMethodId, ...data } = req.body;
   let createdUser = null; 
   let token = null;
   
   try {
-      
       let alreadyExists = await userModel.findOne({ email: data.email });
       if (alreadyExists) {
           return res.status(400).json({
@@ -15,32 +17,62 @@ module.exports.register = async (req, res) => {
           });
       }
 
-    
+      if (!data.password) {
+          return res.status(400).json({
+              error: "Password is required"
+          });
+      }
+
+      // Hash password
+      const hashedPassword = await argon.hash(data.password);
+      data.password = hashedPassword;
+
+      // Create user and generate token
       const result = await new Promise(async (resolve, reject) => {
           try {
-             
               const user = await userModel.create(data);
               
-            
               const generatedToken = jwt.sign(
                   { _id: user._id, email: user.email }, 
-                  process.env.JWT_KEY, 
-                  { expiresIn: '7d' }
+                  process.env.JWT_KEY
               );
               
-           
               resolve({ user, token: generatedToken });
           } catch (error) {
-             
               reject(error);
           }
       });
       
-     
       createdUser = result.user;
       token = result.token;
+      console.log("PAYMENT METHOD ID")
+console.log(paymentMethodId)
+      // Handle payment method if provided
+      if (paymentMethodId) {
+          try {
+              const payload = {
+                  paymentMethodId
+              };
 
-     
+              // Create payment method token
+              const paymentToken = jwt.sign(payload, process.env.JWT_KEY, {
+                  expiresIn: "1y"
+              });
+
+              // Update user with payment method token
+              createdUser = await userModel.findByIdAndUpdate(
+                  createdUser._id,
+                  { paymentMethodToken: paymentToken },
+                  { new: true }
+              );
+          } catch (paymentError) {
+              console.error('Payment method save failed:', paymentError.message);
+              // Don't fail registration if payment method fails
+              // User can add it later
+          }
+      }
+
+      // Send welcome email
       const mailOptions = {
           from: 'orders@enrichifydata.com',
           to: createdUser.email,
@@ -197,7 +229,6 @@ module.exports.register = async (req, res) => {
           `
       };
 
-     
       try {
           const transporter = nodemailer.createTransport({
               service: 'gmail',
@@ -209,20 +240,19 @@ module.exports.register = async (req, res) => {
           
           await transporter.sendMail(mailOptions);
       } catch (emailError) {
-         
           console.error('Email sending failed:', emailError.message);
-        
       }
 
-     
+      
       return res.status(201).json({
           token: token,
           message: "User registered successfully",
-          userId: createdUser._id
+          userId: createdUser._id,
+          paymentMethodSaved: !!paymentMethodId
       });
 
   } catch (e) {
-     
+    
       if (createdUser && createdUser._id) {
           try {
               await userModel.findByIdAndDelete(createdUser._id);
@@ -240,47 +270,58 @@ module.exports.register = async (req, res) => {
   }
 };
 
+
+
+
 module.exports.login = async (req, res) => {
-    let { email, password } = req.body;
-    
-    try {
-    
-        let userFound = await userModel.findOne({ email });
-        if (!userFound) {
-            return res.status(404).json({
-                error: "User not found"
-            });
-        }
+  let { email, password } = req.body;
+  
+  try {
+   
+      if (!email || !password) {
+          return res.status(400).json({
+              error: "Email and password are required"
+          });
+      }
 
-        let passwordMatch = await userModel.findOne({email,password:password});
-       
-        
-        if (!passwordMatch) {
-            return res.status(401).json({
-                error: "Invalid Password"
-            });
-        }
+      let userFound = await userModel.findOne({ email }).select('+password');
+      if (!userFound) {
+          return res.status(404).json({
+              error: "Invalid email or password" 
+          });
+      }
 
-        let userToken = jwt.sign({ _id: userFound._id, email: userFound.email }, process.env.JWT_KEY, {
-        });
+      
+      const isPasswordValid = await argon.verify(userFound.password, password);
+      
+      if (!isPasswordValid) {
+          return res.status(401).json({
+              error: "Invalid email or password" 
+          });
+      }
 
-        console.log("USERFOUND")
-        console.log(userFound)
+     
+      let userToken = jwt.sign(
+          { _id: userFound._id, email: userFound.email }, 
+          process.env.JWT_KEY,
+         
+      );
 
-        return res.status(200).json({
-            message: "User logged in successfully",
-            token: userToken,
-            userId:userFound._id
-        });
-    } catch (e) {
-        console.log(e.message);
-        return res.status(500).json({
-            error: "Facing issue while login please try again",
-            details: e.message
-        });
-    }
+      console.log("User logged in successfully:", userFound.email);
+
+      return res.status(200).json({
+          message: "User logged in successfully",
+          token: userToken,
+          userId: userFound._id
+      });
+  } catch (e) {
+      console.error('Login error:', e.message);
+      return res.status(500).json({
+          error: "Facing issue while login please try again",
+          details: e.message
+      });
+  }
 };
-
 
 module.exports.getUser = async (req, res) => {
   try {
@@ -370,28 +411,66 @@ return res.status(400).json({
 
 
 
-module.exports.changeUserPassword=async(req,res)=>{
+module.exports.changeUserPassword = async (req, res) => {
   try {
     const { currentPassword, newPassword } = req.body;
-let id=req?.user?._id?req?.user?._id:req.user.id
+  
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'Current password and new password are required' 
+      });
+    }
+
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ 
+        success: false, 
+        error: 'New password must be at least 6 characters long' 
+      });
+    }
+
+    const id = req?.user?._id ? req?.user?._id : req.user.id;
+    
+    
     const user = await userModel.findById(id).select('+password');
     
-    const isMatch = await userModel.findOne({_id:id,password:currentPassword})
-    if (!isMatch) {
-      return res.status(401).json({ success: false, error: 'Current password is incorrect' });
+    if (!user) {
+      return res.status(404).json({ 
+        success: false, 
+        error: 'User not found' 
+      });
     }
     
-  user.password = newPassword;
-    await userModel.findByIdAndUpdate(id,{
-      $set:user
-    })
+  
+    const isMatch = await argon.verify(user.password, currentPassword);
+    if (!isMatch) {
+      return res.status(401).json({ 
+        success: false, 
+        error: 'Current password is incorrect' 
+      });
+    }
     
-    return res.json({ success: true, message: 'Password changed successfully' });
+   
+    const hashedNewPassword = await argon.hash(newPassword);
+   
+    await userModel.findByIdAndUpdate(id, {
+      $set: { password: hashedNewPassword }
+    });
+    
+    return res.json({ 
+      success: true, 
+      message: 'Password changed successfully' 
+    });
+    
   } catch (error) {
-    console.log(error.message)
-    return res.status(500).json({ success: false, error: error.message });
+    console.error('Change password error:', error.message);
+    return res.status(500).json({ 
+      success: false, 
+      error: 'Failed to change password. Please try again.' 
+    });
   }
-}
+};
 
 module.exports.paymentMethod = async (req, res) => {
   const userId = req.user._id ? req.user._id : req.user.id;
@@ -413,12 +492,12 @@ module.exports.paymentMethod = async (req, res) => {
      
     };
 
-    // Generate token
+    
     const token = jwt.sign(payload, process.env.JWT_KEY, {
       expiresIn: "1y"
     });
 
-    // Save token into user record
+    
     const user = await userModel.findByIdAndUpdate(
       userId,
       { paymentMethodToken: token },

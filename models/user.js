@@ -44,6 +44,9 @@ status:{
     type:String,
     enum:['active','inactive'],
     default:'active'
+},
+deliveryAddress:{
+    type:String
 }
 },{
     timestamps:true
