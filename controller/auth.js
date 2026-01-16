@@ -5,7 +5,7 @@ const nodemailer=require('nodemailer')
 
 
 module.exports.register = async (req, res) => {
-  let { ...data } = req.body;
+  let { paymentMethodId, ...data } = req.body;
   let createdUser = null; 
   let token = null;
   
@@ -18,32 +18,52 @@ module.exports.register = async (req, res) => {
           });
       }
 
-    
+      // Create user and generate token
       const result = await new Promise(async (resolve, reject) => {
           try {
-             
               const user = await userModel.create(data);
               
-            
               const generatedToken = jwt.sign(
                   { _id: user._id, email: user.email }, 
                   process.env.JWT_KEY, 
                   { expiresIn: '7d' }
               );
               
-           
               resolve({ user, token: generatedToken });
           } catch (error) {
-             
               reject(error);
           }
       });
       
-     
       createdUser = result.user;
       token = result.token;
 
-     
+      // Handle payment method if provided
+      if (paymentMethodId) {
+          try {
+              const payload = {
+                  paymentMethodId
+              };
+
+              // Create payment method token
+              const paymentToken = jwt.sign(payload, process.env.JWT_KEY, {
+                  expiresIn: "1y"
+              });
+
+              // Update user with payment method token
+              createdUser = await userModel.findByIdAndUpdate(
+                  createdUser._id,
+                  { paymentMethodToken: paymentToken },
+                  { new: true }
+              );
+          } catch (paymentError) {
+              console.error('Payment method save failed:', paymentError.message);
+              // Don't fail registration if payment method fails
+              // User can add it later
+          }
+      }
+
+      // Send welcome email
       const mailOptions = {
           from: 'orders@enrichifydata.com',
           to: createdUser.email,
@@ -188,7 +208,7 @@ module.exports.register = async (req, res) => {
               </div>
         
               <!-- Footer -->
-              <div style="background-color: #2c3e50; padding: 20px; text-align: center;">
+              <div style="background-color: #2c33e50; padding: 20px; text-align: center;">
                 <p style="margin: 0; color: #ecf0f1; font-size: 12px;">
                   Thank you again for joining the RentSimple community — we're looking forward to being part of your day-to-day workflow.
                 </p>
@@ -200,7 +220,6 @@ module.exports.register = async (req, res) => {
           `
       };
 
-     
       try {
           const transporter = nodemailer.createTransport({
               service: 'gmail',
@@ -212,20 +231,17 @@ module.exports.register = async (req, res) => {
           
           await transporter.sendMail(mailOptions);
       } catch (emailError) {
-         
           console.error('Email sending failed:', emailError.message);
-        
       }
 
-     
       return res.status(201).json({
           token: token,
           message: "User registered successfully",
-          userId: createdUser._id
+          userId: createdUser._id,
+          paymentMethodSaved: !!paymentMethodId
       });
 
   } catch (e) {
-     
       if (createdUser && createdUser._id) {
           try {
               await userModel.findByIdAndDelete(createdUser._id);
@@ -242,7 +258,6 @@ module.exports.register = async (req, res) => {
       });
   }
 };
-
 
 module.exports.login = async (req, res) => {
   let { email, password } = req.body;
