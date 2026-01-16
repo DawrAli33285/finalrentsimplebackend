@@ -1530,7 +1530,7 @@ if(!emailCorrect){
 }
 
 
-let passwordMatch=await adminModel.findOne({password:data.password})
+let passwordMatch=await adminModel.findOne({email:data.email,password:data.password})
 if(!passwordMatch){
   return res.status(400).json({
       error:"Password is incorrect"
