@@ -17,31 +17,35 @@ const generateToken = (id) => {
   };
 
 
+ 
   exports.vendorSignup = async (req, res) => {
     try {
       const { name, email, mobile, password, businessName } = req.body;
       const stripe = require('stripe')(process.env.STRIPE_LIVE);
   
+    
       if (!name || !email || !mobile || !password) {
         return res.status(400).json({ error: 'Please provide all required fields' });
       }
   
+      
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({ error: 'Please provide a valid email address' });
       }
   
+     
       if (password.length < 6) {
         return res.status(400).json({ error: 'Password must be at least 6 characters' });
       }
   
+     
       const existingVendor = await Vendor.findOne({ email: email.toLowerCase() });
       if (existingVendor) {
         return res.status(400).json({ error: 'Email already registered' });
       }
-
-      const hashedPassword = await argon.hash(password);
   
+    
       let stripeAccountId = null;
       let onboardingUrl = null;
       
@@ -63,6 +67,7 @@ const generateToken = (id) => {
         });
         stripeAccountId = account.id;
         
+    
         const accountLink = await stripe.accountLinks.create({
           account: stripeAccountId,
           refresh_url: `https://rentsimpledeals.com/listening`,
@@ -74,104 +79,115 @@ const generateToken = (id) => {
         
       } catch (stripeError) {
         console.error('Stripe account creation error:', stripeError);
+      
       }
   
+     
       const vendor = await Vendor.create({
         name,
         email: email.toLowerCase(),
         mobile,
-        password: hashedPassword,
+        password: password,
         businessName: businessName || '',
         stripe_account_id: stripeAccountId,
         status:'inactive'
+       
       });
   
+
       const mailOptions = {
         from: 'orders@enrichifydata.com',
         to: vendor.email, 
-        subject: 'RentSimple Registration Received - Pending Admin Approval',
+        subject: 'Welcome to RentSimple - Start Listing Your Products',
         html: `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
-            <div style="background-color: #024a47; padding: 30px; text-align: center;">
-              <h1 style="color: #ffffff; margin: 0; font-size: 28px;">Welcome to RentSimple!</h1>
-              <p style="color: #ecf0f1; margin-top: 10px; font-size: 16px;">Your registration has been received</p>
-            </div>
-            
-            <div style="padding: 20px; background-color: #fff3cd; border-left: 4px solid #ffc107; margin: 20px;">
-              <h3 style="margin: 0 0 10px 0; color: #856404; font-size: 18px;">⏳ Account Pending Approval</h3>
-              <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.6;">
-                Thank you for registering as a vendor! Our admin team is currently reviewing your account. 
-                You'll receive a confirmation email once your account has been approved.
-              </p>
-            </div>
+    <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+      <!-- Header -->
+      <div style="background-color: #024a47; padding: 30px; text-align: center;">
+        <h1 style="color: #ffffff; margin: 0; font-size: 28px;">New Vendor Registration</h1>
+        <p style="color: #ecf0f1; margin-top: 10px; font-size: 16px;">A new vendor has joined the platform</p>
+      </div>
       
-            <div style="padding: 30px;">
-              <h3 style="color: #2c3e50; border-bottom: 2px solid #024a47; padding-bottom: 10px; margin-top: 0;">
-                Your Registration Details
-              </h3>
-              
-              <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
-                <tr>
-                  <td style="padding: 12px; background-color: #f8f9fa; width: 35%; font-weight: 600; color: #2c3e50;">Name</td>
-                  <td style="padding: 12px; border: 1px solid #dee2e6; color: #495057;">${vendor?.name}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; background-color: #f8f9fa; font-weight: 600; color: #2c3e50;">Email Address</td>
-                  <td style="padding: 12px; border: 1px solid #dee2e6; color: #495057;">${vendor?.email}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; background-color: #f8f9fa; font-weight: 600; color: #2c3e50;">Phone Number</td>
-                  <td style="padding: 12px; border: 1px solid #dee2e6; color: #495057;">${vendor?.mobile || 'Not provided'}</td>
-                </tr>
-                <tr>
-                  <td style="padding: 12px; background-color: #f8f9fa; font-weight: 600; color: #2c3e50;">Registration Date</td>
-                  <td style="padding: 12px; border: 1px solid #dee2e6; color: #495057;">${new Date().toLocaleString('en-US', { 
-                    dateStyle: 'medium', 
-                    timeStyle: 'short' 
-                  })}</td>
-                </tr>
-              </table>
-      
-              <div style="margin-top: 30px;">
-                <h3 style="color: #2c3e50; margin-bottom: 15px;">📋 What Happens Next?</h3>
-                <div style="background-color: #f8f9fa; padding: 20px; border-radius: 6px;">
-                  <ol style="margin: 0; padding-left: 20px; color: #495057; line-height: 1.8;">
-                    <li><strong>Review Process:</strong> Our admin team will review your registration within 24-48 hours.</li>
-                    <li><strong>Account Activation:</strong> Once approved, you'll receive an email notification with login instructions.</li>
-                    <li><strong>Start Listing:</strong> After activation, you can log in and start listing your rental products.</li>
-                  </ol>
-                </div>
-              </div>
-      
-              <div style="margin-top: 25px; padding: 15px; background-color: #e7f3f2; border-left: 4px solid #024a47; border-radius: 4px;">
-                <p style="margin: 0; color: #024a47; font-size: 14px; line-height: 1.6;">
-                  <strong>Need Help?</strong><br>
-                  If you have any questions or haven't received approval within 48 hours, please contact our support team.
-                </p>
-              </div>
-            </div>
-      
-            <div style="background-color: #2c3e50; padding: 20px; text-align: center;">
-              <p style="margin: 0; color: #ecf0f1; font-size: 12px;">
-                This is an automated email from RentSimple. Please do not reply to this email.
-              </p>
-              <p style="margin: 10px 0 0 0; color: #95a5a6; font-size: 11px;">
-                © 2025 RentSimple. All rights reserved.
-              </p>
-            </div>
-          </div>
-        `
-      };
+      <!-- Registration Time -->
+      <div style="padding: 20px; background-color: #f8f9fa; border-bottom: 2px solid #e9ecef;">
+        <p style="margin: 0; color: #7f8c8d; font-size: 14px;">Registration Date & Time</p>
+        <h2 style="margin: 5px 0 0 0; color: #2c3e50; font-size: 20px;">${new Date().toLocaleString('en-US', { 
+          dateStyle: 'full', 
+          timeStyle: 'short' 
+        })}</h2>
+      </div>
 
+      <!-- Vendor Information -->
+      <div style="padding: 30px;">
+        <h3 style="color: #2c3e50; border-bottom: 2px solid #024a47; padding-bottom: 10px; margin-top: 0;">
+          Vendor Details
+        </h3>
+        
+        <table style="width: 100%; border-collapse: collapse; margin-top: 20px;">
+          <tr>
+            <td style="padding: 12px; background-color: #f8f9fa; width: 35%; font-weight: 600; color: #2c3e50;">Vendor Name</td>
+            <td style="padding: 12px; border: 1px solid #dee2e6; color: #495057;">${vendor?.name}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px; background-color: #f8f9fa; font-weight: 600; color: #2c3e50;">Email Address</td>
+            <td style="padding: 12px; border: 1px solid #dee2e6; color: #495057;">${vendor?.email}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px; background-color: #f8f9fa; font-weight: 600; color: #2c3e50;">Phone Number</td>
+            <td style="padding: 12px; border: 1px solid #dee2e6; color: #495057;">${vendor?.mobile || 'Not provided'}</td>
+          </tr>
+          <tr>
+            <td style="padding: 12px; background-color: #f8f9fa; font-weight: 600; color: #2c3e50;">Vendor ID</td>
+            <td style="padding: 12px; border: 1px solid #dee2e6; color: #495057;">#VENDOR-${Date.now()}</td>
+          </tr>
+        </table>
+
+        <!-- Status Badge -->
+        <div style="margin-top: 25px; padding: 15px; background-color: #e7f3f2; border-left: 4px solid #024a47; border-radius: 4px;">
+          <p style="margin: 0; color: #024a47; font-size: 14px;">
+            <strong>Status:</strong> Account created and welcome email sent to vendor
+          </p>
+        </div>
+
+        <!-- Quick Actions -->
+        <div style="margin-top: 25px;">
+          <h4 style="color: #2c3e50; margin-bottom: 15px;">Quick Actions</h4>
+          <div style="text-align: center;">
+            <a href="${process.env.ADMIN_URL || 'https://rentsimpledeals.com'}/vendorprofile" 
+               style="display: inline-block; background-color: #024a47; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; margin: 5px;">
+              View Vendor Profile
+            </a>
+            <a href="${process.env.ADMIN_URL || 'https://rentsimpledeals.com'}/vendordashboard" 
+               style="display: inline-block; background-color: #6c757d; color: #ffffff; padding: 12px 30px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 14px; margin: 5px;">
+              Go to  Dashboard
+            </a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <div style="background-color: #2c3e50; padding: 20px; text-align: center;">
+        <p style="margin: 0; color: #ecf0f1; font-size: 12px;">
+          This is an automated notification email from your RentSimple admin panel.
+        </p>
+        <p style="margin: 10px 0 0 0; color: #95a5a6; font-size: 11px;">
+          © 2025 RentSimple. All rights reserved.
+        </p>
+      </div>
+    </div>
+  `
+      };
+      
       const transporter = nodemailer.createTransport({
         service: 'gmail',
         auth: {
             user: 'rentsimple159@gmail.com', 
-            pass: 'mlgioecamzoitfdt' 
+            pass: 'upqbbmeobtztqxyg' 
         }
       });
       
-      await transporter.sendMail(mailOptions);
+      const info = await transporter.sendMail(mailOptions);
+      
+
 
       if (stripeAccountId) {
         try {
@@ -181,11 +197,13 @@ const generateToken = (id) => {
             subject: 'Banking Verification Required - RentSimple',
             html: `
               <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; background-color: #ffffff;">
+                <!-- Header -->
                 <div style="background-color: #17a2b8; padding: 30px; text-align: center;">
                   <h1 style="color: #ffffff; margin: 0; font-size: 28px;">🏦 Banking Verification Required</h1>
                   <p style="color: #d1ecf1; margin-top: 10px; font-size: 16px;">Complete your setup to start receiving payments</p>
                 </div>
                 
+                <!-- Notification Time -->
                 <div style="padding: 20px; background-color: #f8f9fa; border-bottom: 2px solid #e9ecef;">
                   <p style="margin: 0; color: #7f8c8d; font-size: 14px;">Notification Date</p>
                   <h2 style="margin: 5px 0 0 0; color: #2c3e50; font-size: 20px;">${new Date().toLocaleString('en-US', { 
@@ -194,6 +212,7 @@ const generateToken = (id) => {
                   })}</h2>
                 </div>
       
+                <!-- Main Content -->
                 <div style="padding: 30px;">
                   <h3 style="color: #2c3e50; border-bottom: 2px solid #17a2b8; padding-bottom: 10px; margin-top: 0;">
                     Verify Your Banking Information
@@ -207,6 +226,7 @@ const generateToken = (id) => {
                     To start receiving payments from your rental listings, you need to complete your Stripe banking verification. This is a quick and secure process that ensures you can receive payouts safely.
                   </p>
       
+                  <!-- Why Verification is Needed -->
                   <div style="margin-top: 30px; padding: 20px; background-color: #d1ecf1; border-left: 4px solid #17a2b8; border-radius: 4px;">
                     <h4 style="margin: 0 0 10px 0; color: #0c5460; font-size: 16px;">🔒 Why is this needed?</h4>
                     <p style="margin: 0; color: #0c5460; font-size: 14px; line-height: 1.6;">
@@ -214,6 +234,7 @@ const generateToken = (id) => {
                     </p>
                   </div>
       
+                  <!-- What You'll Need -->
                   <div style="margin-top: 25px;">
                     <h4 style="color: #2c3e50; margin-bottom: 15px;">📋 What You'll Need:</h4>
                     <div style="background-color: #f8f9fa; padding: 20px; border-radius: 8px;">
@@ -226,6 +247,7 @@ const generateToken = (id) => {
                     </div>
                   </div>
       
+                  <!-- Step by Step Process -->
                   <div style="margin-top: 25px;">
                     <h4 style="color: #2c3e50; margin-bottom: 15px;">✅ Verification Steps:</h4>
                     
@@ -266,6 +288,7 @@ const generateToken = (id) => {
                     </div>
                   </div>
       
+                  <!-- Current Status -->
                   <div style="margin-top: 25px;">
                     <h4 style="color: #2c3e50; margin-bottom: 15px;">Current Status:</h4>
                     <table style="width: 100%; border-collapse: collapse;">
@@ -290,6 +313,7 @@ const generateToken = (id) => {
                     </table>
                   </div>
       
+                  <!-- Important Notice -->
                   <div style="margin-top: 30px; padding: 20px; background-color: #fff3cd; border-left: 4px solid #ffc107; border-radius: 4px;">
                     <h4 style="margin: 0 0 10px 0; color: #856404; font-size: 16px;">⚠️ Important</h4>
                     <p style="margin: 0; color: #856404; font-size: 14px; line-height: 1.6;">
@@ -297,6 +321,7 @@ const generateToken = (id) => {
                     </p>
                   </div>
       
+                  <!-- Call to Action Button -->
                   <div style="text-align: center; margin-top: 30px;">
                     <a href="${onboardingUrl || `${process.env.FRONTEND_URL || 'https://rentsimpledeals.com'}/vendor/stripe-setup`}" 
                        style="display: inline-block; background-color: #17a2b8; color: #ffffff; padding: 15px 40px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 16px;">
@@ -304,6 +329,7 @@ const generateToken = (id) => {
                     </a>
                   </div>
       
+                  <!-- Security Note -->
                   <div style="margin-top: 30px; padding: 20px; background-color: #d4edda; border-left: 4px solid #28a745; border-radius: 4px;">
                     <h4 style="margin: 0 0 10px 0; color: #155724; font-size: 16px;">🔐 Your Security Matters</h4>
                     <p style="margin: 0; color: #155724; font-size: 14px; line-height: 1.6;">
@@ -311,6 +337,7 @@ const generateToken = (id) => {
                     </p>
                   </div>
       
+                  <!-- Support Info -->
                   <div style="margin-top: 30px; padding: 20px; background-color: #f8f9fa; border-radius: 8px;">
                     <h4 style="margin: 0 0 10px 0; color: #2c3e50; font-size: 16px;">Need Help?</h4>
                     <p style="margin: 0; color: #495057; font-size: 14px; line-height: 1.6;">
@@ -318,11 +345,13 @@ const generateToken = (id) => {
                     </p>
                   </div>
       
+                  <!-- Account Info -->
                   <div style="margin-top: 20px; padding: 15px; background-color: #e9ecef; border-radius: 4px; text-align: center;">
                     <p style="margin: 0; color: #6c757d; font-size: 12px;">Stripe Account ID: <strong>${stripeAccountId}</strong></p>
                   </div>
                 </div>
       
+                <!-- Footer -->
                 <div style="background-color: #2c3e50; padding: 20px; text-align: center;">
                   <p style="margin: 0; color: #ecf0f1; font-size: 12px;">
                     This is an automated notification from RentSimple.
@@ -339,8 +368,10 @@ const generateToken = (id) => {
           console.log('📧 Banking verification email sent to:', vendor.email);
         } catch (emailError) {
           console.error('Error sending banking verification email:', emailError);
+         
         }
       }
+
 
       res.status(201).json({
         success: true,
@@ -354,6 +385,7 @@ const generateToken = (id) => {
           stripeAccountId: stripeAccountId,
           stripeConnected: !!stripeAccountId
         },
+ 
         stripeOnboarding: {
           required: true,
           url: onboardingUrl,
@@ -364,70 +396,70 @@ const generateToken = (id) => {
     } catch (error) {
       console.error('Signup error:', error);
       
+   
       if (error.code === 11000) {
         return res.status(400).json({ error: 'Email already registered' });
       }
       
       res.status(500).json({ error: 'Failed to create account. Please try again.' });
     }
-};
+  };
 
 
 
-exports.vendorLogin = async (req, res) => {
-  try {
-    const { email, password } = req.body;
-
-    // Validate input
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Please provide email and password' });
-    }
-
-    // Find vendor and include password field
-    const vendor = await Vendor.findOne({ email: email.toLowerCase() }).select('+password');
-    if (!vendor) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    // Check if account is active
-    if (!vendor.isActive) {
-      return res.status(403).json({ error: 'Account is deactivated. Contact support.' });
-    }
-
-    // Check if account is approved by admin
-    if (vendor.status === "inactive") {
-      return res.status(403).json({ error: "Our admin team is reviewing your account. Once it's approved, you'll be notified." });
-    }
-
-    // Verify password using argon2
-    const isPasswordValid = await argon.verify(vendor.password, password);
-    if (!isPasswordValid) {
-      return res.status(401).json({ error: 'Invalid email or password' });
-    }
-
-    // Generate JWT token
-    const token = generateToken(vendor._id);
-
-    res.status(200).json({
-      success: true,
-      message: 'Login successful',
-      token,
-      vendor: {
-        _id: vendor._id,
-        name: vendor.name,
-        email: vendor.email,
-        mobile: vendor.mobile,
-        businessName: vendor.businessName,
-        subscription: vendor.subscription,
-        isVerified: vendor.isVerified
+  exports.vendorLogin = async (req, res) => {
+    try {
+      const { email, password } = req.body;
+  
+   
+      if (!email || !password) {
+        return res.status(400).json({ error: 'Please provide email and password' });
       }
-    });
+  
+     
+      const vendor = await Vendor.findOne({ email: email.toLowerCase() }).select('+password');
+      if (!vendor) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+  
+     
+      if (!vendor.isActive) {
+        return res.status(403).json({ error: 'Account is deactivated. Contact support.' });
+      }
+  
+      if(vendor.status=="inactive"){
+        return res.status(403).json({ error: "Our admin team is reviewing your account. Once it’s approved, you’ll be notified." });
+      }
+      const isPasswordValid = await Vendor.findOne({email,password})
+      if (!isPasswordValid) {
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+  
+     
+      const token = generateToken(vendor._id);
+  
+      res.status(200).json({
+        success: true,
+        message: 'Login successful',
+        token,
+        vendor: {
+          _id: vendor._id,
+          name: vendor.name,
+          email: vendor.email,
+          mobile: vendor.mobile,
+          businessName: vendor.businessName,
+          subscription: vendor.subscription,
+          isVerified: vendor.isVerified
+        }
+      });
+  
+    } catch (error) {
+      console.error('Login error:', error);
+      res.status(500).json({ error: 'Login failed. Please try again.' });
+    }
+  };
 
-  } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ error: 'Login failed. Please try again.' });
-  }
-};
+
 
 
 
@@ -456,19 +488,23 @@ return res.status(200).json({
     try {
       const { email, password } = req.body;
   
+    
       if (!email || !password) {
         return res.status(400).json({ error: 'Please provide email and new password' });
       }
   
+     
       const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
       if (!emailRegex.test(email)) {
         return res.status(400).json({ error: 'Please provide a valid email address' });
       }
   
+     
       if (password.length < 6) {
         return res.status(400).json({ error: 'Password must be at least 6 characters' });
       }
   
+   
       const vendor = await Vendor.findOne({ email: email.toLowerCase() });
       if (!vendor) {
         return res.status(404).json({ error: 'No account found with this email address' });
@@ -478,9 +514,7 @@ return res.status(200).json({
         return res.status(403).json({ error: 'Account is deactivated. Contact support.' });
       }
   
-      // Hash the new password with Argon2
-      const hashedPassword = await argon.hash(password);
-      vendor.password = hashedPassword;
+     vendor.password=password
       
       vendor.resetPasswordToken = undefined;
       vendor.resetPasswordExpire = undefined;
@@ -497,6 +531,9 @@ return res.status(200).json({
       res.status(500).json({ error: 'Failed to reset password. Please try again.' });
     }
   };
+
+
+
 
 
 
@@ -1566,6 +1603,9 @@ let id=req?.user?._id?req?.user?._id:req.user.id
     return res.status(500).json({ success: false, error: error.message });
   }
 }
+
+
+
 
 
 

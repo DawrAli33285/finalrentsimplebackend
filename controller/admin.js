@@ -1502,158 +1502,86 @@ return res.status(200).json({
     }
 }
 
-module.exports.createAdmin = async (req, res) => {
-  let { ...data } = req.body;
-  
-  try {
-     
-      let alreadyExists = await adminModel.findOne({ email: data.email });
-      if (alreadyExists) {
-          return res.status(400).json({
-              error: "Admin already exists with this email"
-          });
-      }
-
-     
-      if (!data.password) {
-          return res.status(400).json({
-              error: "Password is required"
-          });
-      }
-
-     
-      if (data.password.length < 6) {
-          return res.status(400).json({
-              error: "Password must be at least 6 characters long"
-          });
-      }
-
-    
-      const hashedPassword = await argon.hash(data.password);
-      data.password = hashedPassword;
-
-     
-      await adminModel.create(data);
-      
-      return res.status(200).json({
-          message: "Admin created successfully"
-      });
-      
-  } catch (e) {
-      console.error('Create admin error:', e.message);
-      return res.status(400).json({
-          error: "Error while creating admin",
-          details: e.message
-      });
+module.exports.createAdmin=async(req,res)=>{
+  let {...data}=req.body;
+  try{
+await adminModel.create(data)
+return res.status(200).json({
+  message:"Admin created sucessfully"
+})
+  }catch(e){
+console.log(e.message)
+return res.status(400).json({
+  error:"Error while creating admin"
+})
   }
-};
+}
 
 
 
-module.exports.loginAdmin = async (req, res) => {
-  let { email, password } = req.body;
-  
-  try {
-    
-      if (!email || !password) {
-          return res.status(400).json({
-              error: "Email and password are required"
-          });
-      }
+module.exports.loginAdmin=async(req,res)=>{
+  let {...data}=req.body;
+  try{
+let emailCorrect=await adminModel.findOne({email:data.email})
+if(!emailCorrect){
+  return res.status(400).json({
+      error:"No admin with this email found"
+  })
+}
 
-    
-      let admin = await adminModel.findOne({ email }).select('+password');
-      if (!admin) {
-          return res.status(401).json({
-              error: "Invalid email or password" 
-          });
-      }
 
-      
-      const isPasswordValid = await argon.verify(admin.password, password);
-      if (!isPasswordValid) {
-          return res.status(401).json({
-              error: "Invalid email or password" 
-          });
-      }
+let passwordMatch=await adminModel.findOne({password:data.password})
+if(!passwordMatch){
+  return res.status(400).json({
+      error:"Password is incorrect"
+  })
+}
 
-    
-      const adminToken = jwt.sign(
-          { _id: admin._id, email: admin.email, role: 'admin' },
-          process.env.JWT_KEY,
-      
-      );
-
-      console.log("Admin logged in successfully:", admin.email);
-
-      return res.status(200).json({
-          message: "Logged in successfully",
-          token: adminToken,
-          adminId: admin._id
-      });
-      
-  } catch (e) {
-      console.error('Admin login error:', e.message);
-      return res.status(500).json({
-          error: "Error while logging in. Please try again.",
-          details: e.message
-      });
+return res.status(200).json({
+  message:"Logged in sucessfully"
+})
+  }catch(e){
+console.log(e.message)
+return res.status(400).json({
+  error:"Error while creating admin"
+})
   }
-};
+}
 
 
 
 
 
-module.exports.resetAdmin = async (req, res) => {
-  let { email, password } = req.body;
-  
-  try {
-   
-      if (!email || !password) {
-          return res.status(400).json({
-              error: "Email and new password are required"
-          });
-      }
 
-      if (password.length < 6) {
-          return res.status(400).json({
-              error: "Password must be at least 6 characters long"
-          });
-      }
 
-    
-      let admin = await adminModel.findOne({ email });
-      if (!admin) {
-          return res.status(404).json({
-              error: "No admin with this email found"
-          });
-      }
+module.exports.resetAdmin=async(req,res)=>{
+  let {...data}=req.body;
+  try{
+let emailCorrect=await adminModel.findOne({email:data.email})
+if(!emailCorrect){
+  return res.status(400).json({
+      error:"No admin with this email found"
+  })
+}
 
-      
-      const hashedPassword = await argon.hash(password);
 
-      
-      await adminModel.findByIdAndUpdate(admin._id, {
-          $set: {
-              password: hashedPassword
-          }
-      });
-
-      console.log("Admin password reset successfully:", admin.email);
-
-      return res.status(200).json({
-          message: "Password reset successfully"
-      });
-      
-  } catch (e) {
-      console.error('Admin password reset error:', e.message);
-      return res.status(500).json({
-          error: "Error while resetting password. Please try again.",
-          details: e.message
-      });
+await adminModel.findByIdAndUpdate(emailCorrect._id,{
+  $set:{
+      password:data.password
   }
-};
+})
+
+return res.status(200).json({
+  message:"Password reseted sucessfully"
+})
+  }catch(e){
+console.log(e.message)
+return res.status(400).json({
+  error:"Error while creating admin"
+})
+  }
+}
+
 
 
 
