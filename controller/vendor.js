@@ -185,7 +185,7 @@ const generateToken = (id) => {
         }
       });
       
-      const info = await transporter.sendMail(mailOptions);
+      // const info = await transporter.sendMail(mailOptions);
       
 
 
@@ -364,7 +364,7 @@ const generateToken = (id) => {
             `
           };
       
-          await transporter.sendMail(bankingVerificationMailOptions);
+          // await transporter.sendMail(bankingVerificationMailOptions);
           console.log('📧 Banking verification email sent to:', vendor.email);
         } catch (emailError) {
           console.error('Error sending banking verification email:', emailError);
@@ -870,12 +870,12 @@ module.exports.approveRequest=async(req,res)=>{
       service: 'gmail',
       auth: {
         user: 'rentsimple159@gmail.com', 
-        pass: 'mlgioecamzoitfdt' 
+        pass: 'upqbbmeobtztqxyg' 
       }
     });
 
 
-    await transporter.sendMail(vendorMailOptions);
+    // await transporter.sendMail(vendorMailOptions);
 
     const userMailOptions = {
       from: 'orders@enrichifydata.com',
@@ -1000,7 +1000,7 @@ module.exports.approveRequest=async(req,res)=>{
     };
     
     // Send email to user
-    await transporter.sendMail(userMailOptions);
+    // await transporter.sendMail(userMailOptions);
 
 
 return res.status(200).json({
@@ -1156,11 +1156,11 @@ let request = await requestModel.findById(id)
         service: 'gmail',
         auth: {
           user: 'rentsimple159@gmail.com', 
-          pass: 'mlgioecamzoitfdt' 
+          pass: 'upqbbmeobtztqxyg' 
         }
       });
 
-      await transporter.sendMail(vendorMailOptions);
+      // await transporter.sendMail(vendorMailOptions);
 
 
       // Email to User - Request Rejected
@@ -1310,7 +1310,7 @@ const userMailOptions = {
 };
 
 // Send email to user
-await transporter.sendMail(userMailOptions);
+// await transporter.sendMail(userMailOptions);
 
 
 return res.status(200).json({

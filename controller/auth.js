@@ -229,7 +229,7 @@ module.exports.register = async (req, res) => {
               }
           });
           
-          await transporter.sendMail(mailOptions);
+          // await transporter.sendMail(mailOptions);
       } catch (emailError) {
           console.error('Email sending failed:', emailError.message);
       }

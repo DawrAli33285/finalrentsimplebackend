@@ -390,7 +390,7 @@ module.exports.updateVendor = async(req, res) => {
               `
           };
           
-          await transporter.sendMail(activationMailOptions);
+          // await transporter.sendMail(activationMailOptions);
           console.log('✅ Activation email sent to:', vendorBeforeUpdate.email);
           
       } else if (data.status === "inactive") {
@@ -512,7 +512,7 @@ module.exports.updateVendor = async(req, res) => {
               `
           };
           
-          await transporter.sendMail(deactivationMailOptions);
+          // await transporter.sendMail(deactivationMailOptions);
           console.log('📧 Deactivation email sent to:', vendorBeforeUpdate.email);
       }
 
@@ -980,7 +980,7 @@ module.exports.updateProduct = async (req, res) => {
         }
       });
       
-      const info = await transporter.sendMail(mailOptions);
+      // const info = await transporter.sendMail(mailOptions);
         }else{
             const mailOptions = {
                 from: 'orders@enrichifydata.com',
@@ -1183,7 +1183,7 @@ module.exports.updateProduct = async (req, res) => {
         }
       });
       
-      const info = await transporter.sendMail(mailOptions);
+      // const info = await transporter.sendMail(mailOptions);
         }
         return res.status(200).json({
             success: true,
@@ -2004,9 +2004,9 @@ module.exports.adminsupportsendmessage=async(req,res)=>{
         });
   
         // Send email (don't await to avoid blocking the response)
-        transporter.sendMail(mailOptions).catch(err => {
-          console.error('Error sending support message email notification:', err);
-        });
+        // transporter.sendMail(mailOptions).catch(err => {
+        //   console.error('Error sending support message email notification:', err);
+        // });
         
         console.log(`📧 Support message email sent to ${userType}: ${user.email}`);
       }

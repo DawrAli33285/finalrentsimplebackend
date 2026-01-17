@@ -458,7 +458,7 @@ auth: {
 });
 
 const info = await transporter.sendMail(mailOptions);
-await transporter.sendMail(userMailOptions)
+// await transporter.sendMail(userMailOptions)
 return res.status(200).json({
   message:"Request sent to vendor successfully"
 })
@@ -885,8 +885,8 @@ module.exports.rejectOffer = async(req, res) => {
               }
           });
 
-          await transporter.sendMail(mailOptions);
-          await transporter.sendMail(userMailOptions)
+          // await transporter.sendMail(mailOptions);
+          // await transporter.sendMail(userMailOptions)
           console.log('📧 Offer rejection email sent to vendor:', request.vendor.email);
       }
 
@@ -1631,7 +1631,7 @@ if (request.listing.powerType === 'Warranty' && warrantyFeeToCharge > 0) {
       });
       
       const info = await transporter.sendMail(vendorMailOptions);
-      await transporter.sendMail(userMailOptions)
+      // await transporter.sendMail(userMailOptions)
 
 
     return res.status(200).json({
@@ -2310,7 +2310,7 @@ const updatedRequest = await requestModel.findById(id)
     }
     });
   
-  await transporter.sendMail(vendorUpdateMailOptions);
+  // await transporter.sendMail(vendorUpdateMailOptions);
 return res.status(200).json({
   message:"Delivery address updated successfully"
 })
