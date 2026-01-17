@@ -1873,49 +1873,72 @@ module.exports.updatePaymentMethod = async(req, res) => {
   // Updated handleAccountUpdated function - recognizes when banking is complete
 
   async function handleAccountUpdated(accountFromWebhook, stripe) {
-    console.log('📝 Processing account.updated for:', accountFromWebhook.id);
+    console.log('='.repeat(60));
+    console.log('📝 ACCOUNT.UPDATED WEBHOOK RECEIVED');
+    console.log('='.repeat(60));
+    console.log('Account ID from webhook:', accountFromWebhook.id);
+    console.log('Webhook data keys:', Object.keys(accountFromWebhook));
     
     try {
+      // Try to find vendor
+      console.log('🔍 Searching for vendor with stripe_account_id:', accountFromWebhook.id);
       const vendor = await Vendor.findOne({ stripe_account_id: accountFromWebhook.id });
       
       if (!vendor) {
-        console.log('⚠️ No vendor found for account:', accountFromWebhook.id);
+        console.log('❌ NO VENDOR FOUND for account:', accountFromWebhook.id);
+        console.log('Checking all vendors in DB...');
+        const allVendors = await Vendor.find({}, 'email stripe_account_id name');
+        console.log('All vendors:', allVendors);
         return;
       }
+      
+      console.log('✅ VENDOR FOUND:');
+      console.log('   Vendor ID:', vendor._id);
+      console.log('   Vendor email:', vendor.email);
+      console.log('   Vendor name:', vendor.name);
+      console.log('   Current stripe_connect_status:', vendor.stripe_connect_status);
+      console.log('   Current stripeAccountData:', vendor.stripeAccountData);
       
       console.log('🔄 Fetching fresh account data from Stripe API...');
       const account = await stripe.accounts.retrieve(accountFromWebhook.id);
       
-      // Critical requirements that MUST be completed for banking
-      const criticalRequirements = ['external_account', 'tos_acceptance.date', 'tos_acceptance.ip'];
-      const currentlyDue = account.requirements?.currently_due || [];
+      console.log('📊 FRESH ACCOUNT DATA:');
+      console.log('   charges_enabled:', account.charges_enabled);
+      console.log('   payouts_enabled:', account.payouts_enabled);
+      console.log('   details_submitted:', account.details_submitted);
+      console.log('   transfers_capability:', account.capabilities?.transfers);
+      console.log('   country:', account.country);
+      console.log('   default_currency:', account.default_currency);
+      console.log('   external_accounts count:', account.external_accounts?.data?.length || 0);
       
-      // Banking is complete when NO critical requirements are in currently_due
+      if (account.external_accounts?.data?.length > 0) {
+        console.log('   🏦 External accounts:');
+        account.external_accounts.data.forEach((acc, i) => {
+          console.log(`      ${i + 1}. ${acc.object} - Last4: ${acc.last4} - Status: ${acc.status}`);
+        });
+      }
+      
+      const currentlyDue = account.requirements?.currently_due || [];
+      const eventuallyDue = account.requirements?.eventually_due || [];
+      
+      console.log('📋 REQUIREMENTS:');
+      console.log('   Currently due:', currentlyDue);
+      console.log('   Eventually due:', eventuallyDue);
+      
+      const criticalRequirements = ['external_account', 'tos_acceptance.date', 'tos_acceptance.ip'];
       const hasCriticalRequirements = criticalRequirements.some(req => currentlyDue.includes(req));
       const bankingComplete = !hasCriticalRequirements;
       
-      // Full onboarding check (stricter - for future use)
       const isFullyOnboarded =
         account.details_submitted === true &&
         account.payouts_enabled === true &&
         currentlyDue.length === 0;
       
-      console.log('============ FRESH ACCOUNT STATUS ============');
-      console.log('Vendor ID:', vendor._id);
-      console.log('Account ID:', account.id);
-      console.log('charges_enabled:', account.charges_enabled);
-      console.log('payouts_enabled:', account.payouts_enabled);
-      console.log('details_submitted:', account.details_submitted);
-      console.log('transfers_capability:', account.capabilities?.transfers);
-      console.log('Has critical requirements:', hasCriticalRequirements);
-      console.log('bankingComplete:', bankingComplete);
-      console.log('isFullyOnboarded:', isFullyOnboarded);
-      console.log('Currently due:', currentlyDue);
-      console.log('Eventually due:', account.requirements?.eventually_due);
-      console.log('External accounts:', account.external_accounts?.data?.length || 0);
-      console.log('=============================================');
+      console.log('✅ COMPUTED STATUS:');
+      console.log('   hasCriticalRequirements:', hasCriticalRequirements);
+      console.log('   bankingComplete:', bankingComplete);
+      console.log('   isFullyOnboarded:', isFullyOnboarded);
       
-      // UPDATE: Set stripe_connect_status based on banking completion
       const updateData = {
         stripe_account_id: account.id,
         stripeAccountData: {
@@ -1926,56 +1949,66 @@ module.exports.updatePaymentMethod = async(req, res) => {
           country: account.country,
           defaultCurrency: account.default_currency,
           currentlyDue: currentlyDue,
-          eventuallyDue: account.requirements?.eventually_due || [],
+          eventuallyDue: eventuallyDue,
           hasBankAccount: account.external_accounts?.data?.length > 0,
           bankingComplete: bankingComplete,
           fullyOnboarded: isFullyOnboarded,
           lastUpdated: new Date()
         }
       };
-
-      // THIS IS THE KEY FIX: Set stripe_connect_status when banking is complete
+  
       if (bankingComplete) {
         updateData.stripe_connect_status = true;
-        console.log('🎉 Setting stripe_connect_status to TRUE');
+        console.log('🎉 Will set stripe_connect_status to TRUE');
       } else {
         updateData.stripe_connect_status = false;
-        console.log('⏳ Setting stripe_connect_status to FALSE - requirements pending');
+        console.log('⏳ Will set stripe_connect_status to FALSE');
       }
+      
+      console.log('💾 UPDATE DATA TO BE SAVED:');
+      console.log(JSON.stringify(updateData, null, 2));
+      
+      console.log('🔄 Attempting database update...');
       const updatedVendor = await Vendor.findOneAndUpdate(
-        { email: vendor.email },
-        {
-          $set: {
-            stripe_connect_status: isFullyOnboarded,
-          }
-        },
-        { new: true } 
+        { stripe_account_id: account.id },
+        { $set: updateData },
+        { new: true }
       );
       
-      console.log('💾 Database updated. stripe_connect_status:', updatedVendor.stripe_connect_status);
+      if (!updatedVendor) {
+        console.log('❌ UPDATE FAILED - No vendor returned from findOneAndUpdate');
+        return;
+      }
       
-      // Send email notification based on status change
+      console.log('✅ DATABASE UPDATE SUCCESSFUL:');
+      console.log('   stripe_connect_status:', updatedVendor.stripe_connect_status);
+      console.log('   stripeAccountData.bankingComplete:', updatedVendor.stripeAccountData?.bankingComplete);
+      console.log('   stripeAccountData.hasBankAccount:', updatedVendor.stripeAccountData?.hasBankAccount);
+      console.log('   stripeAccountData.payoutsEnabled:', updatedVendor.stripeAccountData?.payoutsEnabled);
+      console.log('   Full stripeAccountData:', updatedVendor.stripeAccountData);
+      
       const wasNotComplete = !vendor.stripeAccountData?.bankingComplete;
       
       if (bankingComplete && wasNotComplete) {
-        console.log('✅✅✅ BANKING SETUP COMPLETE ✅✅✅');
-        console.log('Vendor:', updatedVendor._id);
-        console.log('Status in DB:', updatedVendor.stripe_connect_status);
+        console.log('✅✅✅ BANKING SETUP COMPLETE - SENDING EMAIL ✅✅✅');
         await sendBankingSuccessEmail(vendor, account);
       } else if (!bankingComplete) {
         console.log('⏳ VENDOR ONBOARDING INCOMPLETE');
-        console.log('Vendor:', vendor._id);
-        console.log('Missing critical requirements:', currentlyDue.filter(req => criticalRequirements.includes(req)));
+        console.log('Missing requirements:', currentlyDue.filter(req => criticalRequirements.includes(req)));
       } else {
         console.log('ℹ️ Status unchanged - banking already complete');
       }
       
+      console.log('='.repeat(60));
+      console.log('END OF ACCOUNT.UPDATED HANDLER');
+      console.log('='.repeat(60));
+      
     } catch (error) {
-      console.error('❌ Error handling account.updated:', error);
+      console.error('❌ ERROR in handleAccountUpdated:', error);
+      console.error('Error stack:', error.stack);
       throw error;
     }
   }
-
   // Also handle when external account is explicitly created
  
 
@@ -2092,42 +2125,107 @@ module.exports.updatePaymentMethod = async(req, res) => {
       });
       
       if (!vendor) {
-        console.log('⚠️ No vendor found for external account');
+        console.log('⚠️ No vendor found for account:', externalAccount.account);
         return;
       }
       
       console.log('✅ Bank account added for vendor:', vendor._id);
       
+      // Fetch full account data
       const account = await stripe.accounts.retrieve(externalAccount.account);
       const currentlyDue = account.requirements?.currently_due || [];
       const criticalRequirements = ['external_account', 'tos_acceptance.date', 'tos_acceptance.ip'];
       const hasCriticalRequirements = criticalRequirements.some(req => currentlyDue.includes(req));
       const bankingComplete = !hasCriticalRequirements;
       
+      console.log('🔍 After bank account added:');
+      console.log('   Currently due:', currentlyDue);
+      console.log('   Banking complete:', bankingComplete);
+      console.log('   Vendor before update:', vendor.stripe_connect_status);
+      
       const updateData = {
         'stripeAccountData.hasBankAccount': true,
         'stripeAccountData.bankAccountLast4': externalAccount.last4,
         'stripeAccountData.bankAccountStatus': externalAccount.status,
         'stripeAccountData.bankingComplete': bankingComplete,
-        'stripeAccountData.currentlyDue': currentlyDue
+        'stripeAccountData.currentlyDue': currentlyDue,
+        'stripeAccountData.chargesEnabled': account.charges_enabled,
+        'stripeAccountData.payoutsEnabled': account.payouts_enabled,
+        'stripeAccountData.detailsSubmitted': account.details_submitted,
+        'stripeAccountData.transfersCapability': account.capabilities?.transfers,
+        'stripeAccountData.lastUpdated': new Date()
       };
       
+      // Set stripe_connect_status if banking is complete
       if (bankingComplete) {
         updateData.stripe_connect_status = true;
-        console.log('✅ Setting stripe_connect_status to TRUE');
+        console.log('✅ Setting stripe_connect_status to TRUE via external_account.created');
       }
       
-      await Vendor.findByIdAndUpdate(vendor._id, { $set: updateData });
+      const updatedVendor = await Vendor.findByIdAndUpdate(
+        vendor._id, 
+        { $set: updateData },
+        { new: true } // Return updated document
+      );
+      
+      console.log('💾 Vendor updated. stripe_connect_status:', updatedVendor.stripe_connect_status);
+      console.log('💾 Banking complete:', updatedVendor.stripeAccountData?.bankingComplete);
       
       if (bankingComplete) {
         await sendBankingSuccessEmail(vendor, account);
       }
       
     } catch (error) {
-      console.error('❌ Error handling external_account.created:', error.message);
+      console.error('❌ Error handling external_account.created:', error);
       throw error;
     }
   }
+
+  // async function handleExternalAccountCreated(externalAccount, stripe) {
+  //   console.log('🏦 External account created:', externalAccount.id);
+    
+  //   try {
+  //     const vendor = await Vendor.findOne({ 
+  //       stripe_account_id: externalAccount.account 
+  //     });
+      
+  //     if (!vendor) {
+  //       console.log('⚠️ No vendor found for external account');
+  //       return;
+  //     }
+      
+  //     console.log('✅ Bank account added for vendor:', vendor._id);
+      
+  //     const account = await stripe.accounts.retrieve(externalAccount.account);
+  //     const currentlyDue = account.requirements?.currently_due || [];
+  //     const criticalRequirements = ['external_account', 'tos_acceptance.date', 'tos_acceptance.ip'];
+  //     const hasCriticalRequirements = criticalRequirements.some(req => currentlyDue.includes(req));
+  //     const bankingComplete = !hasCriticalRequirements;
+      
+  //     const updateData = {
+  //       'stripeAccountData.hasBankAccount': true,
+  //       'stripeAccountData.bankAccountLast4': externalAccount.last4,
+  //       'stripeAccountData.bankAccountStatus': externalAccount.status,
+  //       'stripeAccountData.bankingComplete': bankingComplete,
+  //       'stripeAccountData.currentlyDue': currentlyDue
+  //     };
+      
+  //     if (bankingComplete) {
+  //       updateData.stripe_connect_status = true;
+  //       console.log('✅ Setting stripe_connect_status to TRUE');
+  //     }
+      
+  //     await Vendor.findByIdAndUpdate(vendor._id, { $set: updateData });
+      
+  //     if (bankingComplete) {
+  //       await sendBankingSuccessEmail(vendor, account);
+  //     }
+      
+  //   } catch (error) {
+  //     console.error('❌ Error handling external_account.created:', error.message);
+  //     throw error;
+  //   }
+  // }
     /**
      * Handle capability.updated event
      * Transfers capability is what allows receiving payments

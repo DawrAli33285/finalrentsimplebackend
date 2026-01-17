@@ -73,6 +73,7 @@ const generateToken = (id) => {
           refresh_url: `https://rentsimpledeals.com/listening`,
           return_url: `https://rentsimpledeals.com/listening`,
           type: 'account_onboarding',
+          collect: 'eventually_due'
         });
         
         onboardingUrl = accountLink.url;
@@ -1405,6 +1406,7 @@ module.exports.generateStripeOnboardingLink = async (req, res) => {
       refresh_url: `${process.env.FRONTEND_URL || 'https://rentsimpledeals.com'}/vendordashboard?stripe_refresh=true`,
       return_url: `${process.env.FRONTEND_URL || 'https://rentsimpledeals.com'}/vendordashboard?stripe_return=true`,
       type: 'account_onboarding',
+      collect: 'eventually_due'
     });
     
     return res.status(200).json({
